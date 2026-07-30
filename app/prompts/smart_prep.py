@@ -8,11 +8,11 @@ SMART_PREP_PROMPT = (
     "with subject and examType parameters (use a 5-second timeout and max 2 retries, do NOT block the pipeline on failure). "
     "You have a tool 'trigger_aloc_cache' (or equivalent custom tool) that hits the ALOC API.\n"
     "   - For NCEE (Common Entrance): Do NOT call ALOC (it has no NCEE data). Instead, use the "
-    "MongoDB find tool on 'pastquestions' collection (database: 'test') with query "
+    "MongoDB find tool on 'pastquestions' collection (database: 'gradrai') with query "
     "{\"examType\": \"ncee\", \"subject\": {\"$in\": [\"<weak_topic>\"]}} to fetch pre-seeded NCEE questions. "
     "NCEE subjects are: mathematics, basic_science, english, national_values, quantitative_aptitude, verbal_aptitude.\n"
     "3) Structure a practice session of 10-15 questions drawn from weak topics.\n"
-    "4) Call the MongoDB insertOne tool on 'practice_sessions' collection (database: 'test') "
+    "4) Call the MongoDB insertOne tool on 'practice_sessions' collection (database: 'gradrai') "
     "to save ONE document with this schema.\n"
     "CRITICAL: All ObjectId reference fields (userId, pastQuestionId) MUST be written as "
     '{"$oid": "<hex_string>"} format so MongoDB stores them as proper ObjectId types, NOT plain strings.\n'

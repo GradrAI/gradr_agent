@@ -5,9 +5,9 @@ FINAL_AGGREGATOR_PROMPT = (
     "linked_user_id, referee_status, max_score (all provided in session state)\n\n"
     "TASKS:\n"
     "1) Compute total score (sum of individual scores).\n"
-    "2) Use the MongoDB aggregate tool on 'results' collection (database: 'test') "
+    "2) Use the MongoDB aggregate tool on 'results' collection (database: 'gradrai') "
     "to compute class statistics: average score, count of results, count with status 'PENDING_REVIEW'.\n"
-    "3) Call the MongoDB insert-many tool on 'results' collection (database: 'test') "
+    "3) Call the MongoDB insert-many tool on 'results' collection (database: 'gradrai') "
     "to insert ONE document with the following structure. "
     "CRITICAL: All ObjectId reference fields (courseId, categoryId, studentRef, lecturerId, "
     'examId, linkedUserId) MUST be written as {"$oid": "<hex_string>"} format so MongoDB '

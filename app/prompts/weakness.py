@@ -5,10 +5,10 @@ WEAKNESS_PROMPT = (
     "1) Identify questions where score/maxScore < 0.60.\n"
     "2) Map weak questions to subject topic labels. If topics are not in session state, use the MongoDB find tool on 'exams' "
     "collection to retrieve the exam record by exam_id and extract 'topicPriorities' or topics.\n"
-    "3) Use the MongoDB aggregate tool on 'results' collection (database: 'test') to find "
+    "3) Use the MongoDB aggregate tool on 'results' collection (database: 'gradrai') to find "
     "class-wide weak topics across all students who attempted the same exam.\n"
     "4) PERSIST the weakness profile: Use the MongoDB updateOne tool on 'students' collection "
-    "(database: 'test') to update the student document. Match by {\"studentId\": \"<student_id>\"} "
+    "(database: 'gradrai') to update the student document. Match by {\"studentId\": \"<student_id>\"} "
     "and set:\n"
     "   {\"$set\": {\n"
     '     "weaknessProfile.weakTopics": ["topic1", "topic2"],\n'

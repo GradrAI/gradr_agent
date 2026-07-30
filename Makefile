@@ -26,31 +26,52 @@ playground:
 # Backend Deployment Targets
 # ==============================================================================
 
+# The MongoDB MCP subprocess is configured purely from this environment
+# variable (see app/toolsets.py). It is NOT inherited by the deployed Agent
+# Engine runtime, so it must be passed explicitly at deploy time — without it
+# the MCP starts with an empty connection string and every MongoDB tool call
+# in the grading pipelines silently fails.
+MDB_MCP_CONNECTION_STRING ?= $(shell sed -n 's/^MDB_MCP_CONNECTION_STRING=//p' .env 2>/dev/null | tr -d "\"'" | head -1)
+
+# Fail loudly rather than shipping an agent that cannot reach the database.
+check-mdb:
+	@test -n '$(MDB_MCP_CONNECTION_STRING)' || { \
+		echo "ERROR: MDB_MCP_CONNECTION_STRING is empty."; \
+		echo "Set it in gradr_agent/.env or pass MDB_MCP_CONNECTION_STRING=... to make."; \
+		exit 1; }
+	@echo "MongoDB MCP target: $$(echo '$(MDB_MCP_CONNECTION_STRING)' | sed 's|//[^@]*@|//***@|')"
+
 # Generate requirements.txt
 export-reqs:
 	@(uv export --no-hashes --no-header --no-dev --no-emit-project --no-annotate > app/app_utils/.requirements.txt 2>/dev/null || \
 	uv export --no-hashes --no-header --no-dev --no-emit-project > app/app_utils/.requirements.txt)
 
 # Deploy PBT Grading Agent
-deploy-pbt: export-reqs
-
-	uv run -m app.app_utils.deploy \
+# Recipe is prefixed with @ so make does not echo the connection string
+# (which carries database credentials) into build logs.
+deploy-pbt: check-mdb export-reqs
+	@uv run -m app.app_utils.deploy \
 		--source-packages=./app \
 		--entrypoint-module=app.agent_engine_app \
 		--entrypoint-object=pbt_pipeline_engine \
 		--display-name="gradr-pbt-agent" \
+		--set-env-vars='MDB_MCP_CONNECTION_STRING=$(MDB_MCP_CONNECTION_STRING)' \
 		--requirements-file=app/app_utils/.requirements.txt
 
 # Deploy CBT Grading Agent
-deploy-cbt-grading: export-reqs
-	uv run -m app.app_utils.deploy \
+deploy-cbt-grading: check-mdb export-reqs
+	@uv run -m app.app_utils.deploy \
 		--source-packages=./app \
 		--entrypoint-module=app.agent_engine_app \
 		--entrypoint-object=cbt_grading_engine \
 		--display-name="gradr-cbt-grading-agent" \
+		--set-env-vars='MDB_MCP_CONNECTION_STRING=$(MDB_MCP_CONNECTION_STRING)' \
 		--requirements-file=app/app_utils/.requirements.txt
 
 # Deploy CBT Exam Generation Agent
+# Deliberately NOT given MDB_MCP_CONNECTION_STRING: this pipeline
+# (TopicExtractionAgent -> QuestionGenerationAgent) touches no MongoDB, so it
+# has no reason to hold database credentials.
 deploy-cbt-exam: export-reqs
 	uv run -m app.app_utils.deploy \
 		--source-packages=./app \
