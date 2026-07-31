@@ -1,0 +1,35 @@
+[
+  {
+    "eval_id": "gs-001",
+    "exam_type": "WASSCE",
+    "subject": "Biology",
+    "question_id": "q1",
+    "student_answer_gcs_uri": "gs://gradr-scripts/eval/sample-001.pdf",
+    "rubric_text": "Award 2 marks for correct definition, 3 marks for examples",
+    "max_score": 5,
+    "human_score": 4,
+    "human_grader_id": "expert-A"
+  },
+  {
+    "eval_id": "gs-002",
+    "exam_type": "WASSCE",
+    "subject": "Biology",
+    "question_id": "q2",
+    "student_answer_gcs_uri": "gs://gradr-scripts/eval/sample-002.pdf",
+    "rubric_text": "Award 5 marks for diagram, 5 marks for labeling",
+    "max_score": 10,
+    "human_score": 7,
+    "human_grader_id": "expert-A"
+  },
+  {
+    "eval_id": "gs-003",
+    "exam_type": "JAMB",
+    "subject": "Mathematics",
+    "question_id": "q1",
+    "student_answer_gcs_uri": "gs://gradr-scripts/eval/sample-003.pdf",
+    "rubric_text": "Award full marks for correct final answer with working",
+    "max_score": 4,
+    "human_score": 4,
+    "human_grader_id": "expert-B"
+  }
+]

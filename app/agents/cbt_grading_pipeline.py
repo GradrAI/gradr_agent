@@ -7,7 +7,12 @@ from app.agents.shared_agents import (
     create_smart_prep_agent,
     create_weakness_detection_agent,
 )
-from app.callbacks import generic_callback, deterministic_mcq_grading
+from app.callbacks import (
+    generic_callback,
+    deterministic_mcq_grading,
+    pipeline_timing_before_callback,
+    pipeline_timing_after_callback,
+)
 from app.prompts import (
     ATTEMPT_RETRIEVAL_PROMPT,
     ESSAY_GRADING_PROMPT,
@@ -80,4 +85,6 @@ cbt_grading_pipeline: SequentialAgent = CBTPipelineAgent(
         create_smart_prep_agent(),
         result_persistence_agent,
     ],
+    before_agent_callback=pipeline_timing_before_callback,
+    after_agent_callback=pipeline_timing_after_callback,
 )

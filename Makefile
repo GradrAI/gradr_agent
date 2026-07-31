@@ -120,3 +120,11 @@ lint:
 # Optional env vars: GEMINI_DISPLAY_NAME, GEMINI_DESCRIPTION, GEMINI_TOOL_DESCRIPTION, AGENT_ENGINE_ID
 register-gemini-enterprise:
 	@uvx agent-starter-pack@0.21.0 register-gemini-enterprise
+
+# ==============================================================================
+# Evaluation
+# ==============================================================================
+
+# Run grading accuracy evaluation against gold-standard data
+eval-accuracy:
+	uv run python -m eval.compute_metrics --gold eval/gold_standard.json --output eval/results.json

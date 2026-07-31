@@ -25,6 +25,8 @@ from app.agents.shared_agents import (
 from app.callbacks import (
     final_after_callback,
     grading_after_callback,
+    pipeline_timing_after_callback,
+    pipeline_timing_before_callback,
     preprocessing_after_callback,
     referee_after_callback,
 )
@@ -121,4 +123,6 @@ pbt_grading_pipeline: SequentialAgent = PBTGradingPipelineAgent(
         create_smart_prep_agent(),
         final_aggregator,
     ],
+    before_agent_callback=pipeline_timing_before_callback,
+    after_agent_callback=pipeline_timing_after_callback,
 )

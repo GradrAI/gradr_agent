@@ -57,6 +57,13 @@ def grading_after_callback(callback_context: CallbackContext) -> None:
             logger.error("GradingAgent returned empty graded_questions. Aborting pipeline.")
             raise ValueError("CRITICAL: GradingAgent produced zero graded questions.")
         callback_context.state["graded_questions"] = graded
+        # Preserve per-question metrics for FinalAggregator persistence
+        callback_context.state["confidences"] = [
+            q.get("model_confidence", 0) for q in graded
+        ]
+        callback_context.state["rubric_alignments"] = [
+            q.get("rubric_alignment", []) for q in graded
+        ]
         logger.info("GradingAgent: Successfully evaluated answers against the rubric. Handing off to RefereeAgent...")
         _log_agent_complete("GradingAgent", "graded_result")
     except json.JSONDecodeError as e:
@@ -72,6 +79,9 @@ def referee_after_callback(callback_context: CallbackContext) -> None:
     try:
         data = json.loads(_clean_json(raw_rep))
         callback_context.state["referee_status"] = data.get("status", "COMPLETED")
+        # Preserve referee metrics for FinalAggregator persistence
+        callback_context.state["low_confidence_count"] = data.get("low_confidence_count", 0)
+        callback_context.state["referee_corrections"] = data.get("corrected", [])
         if data.get("status") == "PENDING_REVIEW":
             logger.warning("[REFEREE AGENT]: Low confidence detected. Flagging for teacher review (HITL).")
         else:
@@ -296,3 +306,26 @@ def skip_smartprep_gate(callback_context: CallbackContext) -> typing.Optional[ty
     if result is not None:
         return result
     return skip_smartprep_if_unlinked(callback_context)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline-level timing
+# ---------------------------------------------------------------------------
+import time
+
+
+def pipeline_timing_before_callback(
+    callback_context: CallbackContext,
+) -> typing.Optional[typing.Any]:
+    """Record pipeline start time in state."""
+    callback_context.state["pipeline_start_time"] = time.time()
+    return None
+
+
+def pipeline_timing_after_callback(callback_context: CallbackContext) -> None:
+    """Compute pipeline duration and store in state for FinalAggregator."""
+    start = callback_context.state.get("pipeline_start_time")
+    if start is not None:
+        callback_context.state["pipeline_duration_ms"] = int(
+            (time.time() - start) * 1000
+        )
