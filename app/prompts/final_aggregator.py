@@ -2,7 +2,9 @@ FINAL_AGGREGATOR_PROMPT = (
     "You are the FinalAggregator. Assemble and persist the final grading result.\n\n"
     "INPUT from state: graded_questions, referee_report, practice_session_id, "
     "student_id, student_ref, exam_id, course_id, category_id, lecturer_id, "
-    "linked_user_id, referee_status, max_score (all provided in session state)\n\n"
+    "linked_user_id, referee_status, max_score, "
+    "confidences, rubric_alignments, low_confidence_count, referee_corrections, "
+    "pipeline_duration_ms (all provided in session state)\n\n"
     "TASKS:\n"
     "1) Compute total score (sum of individual scores).\n"
     "2) Use the MongoDB aggregate tool on 'results' collection (database: 'gradrai') "
@@ -26,6 +28,16 @@ FINAL_AGGREGATOR_PROMPT = (
     '  "feedback": "<overall student feedback>",\n'
     '  "lecturerComment": "<summary of grading run>",\n'
     '  "status": "<referee_status or COMPLETED>",\n'
+    '  "gradingMeta": {\n'
+    '    "pipelineType": "PBT",\n'
+    '    "pipelineDurationMs": <pipeline_duration_ms from state, or 0 if not available>,\n'
+    '    "confidences": <confidences array from state>,\n'
+    '    "meanConfidence": <arithmetic mean of confidences array>,\n'
+    '    "lowConfidenceCount": <low_confidence_count from state>,\n'
+    '    "refereeCorrections": <referee_corrections from state, or empty array>,\n'
+    '    "refereeStatus": "<referee_status from state>",\n'
+    '    "rubricAlignments": <rubric_alignments from state, or empty array>\n'
+    "  },\n"
     '  "createdAt": "<current ISO timestamp>"\n'
     "}\n\n"
     "IMPORTANT: If any ObjectId value (student_ref, exam_id, etc.) is empty or not available, "
