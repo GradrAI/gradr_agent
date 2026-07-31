@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 attempt_retrieval_agent = Agent(
     name="AttemptRetrievalAgent",
-    model=Gemini(model="gemini-2.5-flash-lite", retry_options=retry_config),
+    model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
     instruction=ATTEMPT_RETRIEVAL_PROMPT,
     tools=[mongo_mcp_toolset],
     output_key="attempt_context_raw",
@@ -31,7 +31,7 @@ attempt_retrieval_agent = Agent(
 
 mcq_grading_agent = Agent(
     name="MCQGradingAgent",
-    model=Gemini(model="gemini-2.5-flash-lite", retry_options=retry_config),
+    model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
     instruction=MCQ_GRADING_PROMPT,
     output_key="mcq_results_raw",
     before_agent_callback=deterministic_mcq_grading,
@@ -40,7 +40,7 @@ mcq_grading_agent = Agent(
 
 essay_grading_agent = Agent(
     name="EssayGradingAgent",
-    model=Gemini(model="gemini-2.5-flash", retry_options=retry_config),
+    model=Gemini(model="gemini-3.5-flash-lite", retry_options=retry_config),
     instruction=ESSAY_GRADING_PROMPT,
     tools=[mongo_mcp_toolset],
     output_key="essay_results_raw",
@@ -49,7 +49,7 @@ essay_grading_agent = Agent(
 
 feedback_narration_agent = Agent(
     name="FeedbackNarrationAgent",
-    model=Gemini(model="gemini-2.5-flash-lite", retry_options=retry_config),
+    model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
     instruction=FEEDBACK_NARRATION_PROMPT,
     output_key="grading_summary_raw",
     after_agent_callback=generic_callback("grading_summary"),
@@ -57,7 +57,7 @@ feedback_narration_agent = Agent(
 
 result_persistence_agent = Agent(
     name="ResultPersistenceAgent",
-    model=Gemini(model="gemini-2.5-flash-lite", retry_options=retry_config),
+    model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
     instruction=RESULT_PERSISTENCE_PROMPT,
     tools=[mongo_mcp_toolset],
     output_key="final_grading_payload_raw",

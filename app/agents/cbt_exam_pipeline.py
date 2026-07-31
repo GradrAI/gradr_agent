@@ -52,7 +52,7 @@ STANDARD_RULES = (
 
 topic_extraction_agent = Agent(
     name="TopicExtractionAgent",
-    model=Gemini(model="gemini-2.5-flash-lite", retry_options=retry_config),
+    model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
     instruction=(
         "<role>\n"
         "You are the TopicExtractionAgent, an elite academic content parser and educational researcher. "
@@ -86,7 +86,7 @@ topic_extraction_agent = Agent(
 
 question_generation_agent = Agent(
     name="QuestionGenerationAgent",
-    model=Gemini(model="gemini-2.5-flash", retry_options=retry_config),
+    model=Gemini(model="gemini-3.5-flash-lite", retry_options=retry_config),
     instruction=(
         "<role>\n"
         "You are a senior academic curriculum mapping specialist. Your expertise lies in crafting challenging, curriculum-aligned assessments that definitively test human comprehension.\n"

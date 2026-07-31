@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def create_weakness_detection_agent() -> Agent:
     return Agent(
         name="WeaknessDetectionAgent",
-        model=Gemini(model="gemini-2.5-flash-lite", retry_options=retry_config),
+        model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
         instruction=WEAKNESS_PROMPT,
         tools=[mongo_mcp_toolset],
         output_key="weakness_profile_raw",
@@ -24,7 +24,7 @@ def create_weakness_detection_agent() -> Agent:
 def create_smart_prep_agent() -> Agent:
     return Agent(
         name="SmartPrepAgent",
-        model=Gemini(model="gemini-2.5-flash-lite", retry_options=retry_config),
+        model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
         instruction=SMART_PREP_PROMPT,
         tools=[custom_mcp_toolset, mongo_mcp_toolset],
         output_key="practice_sessions_created_raw",
