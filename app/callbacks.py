@@ -8,6 +8,107 @@ from app.app_utils.common import _clean_json, _log_agent_complete
 
 logger = logging.getLogger(__name__)
 
+LOW_CONFIDENCE_THRESHOLD = 0.70
+
+
+def _float_or_none(value: typing.Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None
+
+
+def _question_value(question: dict[str, typing.Any], *keys: str) -> typing.Any:
+    for key in keys:
+        if key in question:
+            return question[key]
+    return None
+
+
+def _append_validation_error(
+    callback_context: CallbackContext, message: str
+) -> None:
+    errors = callback_context.state.get("validation_errors")
+    if not isinstance(errors, list):
+        errors = []
+    errors.append(message)
+    callback_context.state["validation_errors"] = errors
+    callback_context.state["referee_status"] = "PENDING_REVIEW"
+
+
+def _normalise_graded_question(
+    question: dict[str, typing.Any],
+) -> dict[str, typing.Any]:
+    normalised = dict(question)
+    if "maxScore" not in normalised and "max_score" in normalised:
+        normalised["maxScore"] = normalised["max_score"]
+    if "questionId" not in normalised and "question_id" in normalised:
+        normalised["questionId"] = normalised["question_id"]
+    if "explanation" not in normalised and "justification" in normalised:
+        normalised["explanation"] = normalised["justification"]
+    return normalised
+
+
+def _apply_score_safety_gates(
+    callback_context: CallbackContext, graded: list[typing.Any]
+) -> list[dict[str, typing.Any]]:
+    normalised: list[dict[str, typing.Any]] = []
+    total_score = 0.0
+
+    for index, raw_question in enumerate(graded):
+        if not isinstance(raw_question, dict):
+            _append_validation_error(
+                callback_context, f"graded_questions[{index}] is not an object"
+            )
+            continue
+
+        question = _normalise_graded_question(raw_question)
+        score = _float_or_none(question.get("score"))
+        max_score = _float_or_none(_question_value(question, "maxScore", "max_score"))
+
+        if score is None:
+            _append_validation_error(
+                callback_context,
+                f"graded_questions[{index}].score is missing or invalid",
+            )
+        elif score < 0:
+            _append_validation_error(
+                callback_context, f"graded_questions[{index}].score is negative"
+            )
+        else:
+            total_score += score
+
+        if max_score is None:
+            _append_validation_error(
+                callback_context,
+                f"graded_questions[{index}].maxScore is missing or invalid",
+            )
+        elif max_score < 0:
+            _append_validation_error(
+                callback_context, f"graded_questions[{index}].maxScore is negative"
+            )
+        elif score is not None and score > max_score:
+            _append_validation_error(
+                callback_context,
+                f"graded_questions[{index}].score {score:g} exceeds maxScore {max_score:g}",
+            )
+
+        confidence = _float_or_none(question.get("model_confidence"))
+        if confidence is not None and confidence < LOW_CONFIDENCE_THRESHOLD:
+            callback_context.state["referee_status"] = "PENDING_REVIEW"
+
+        normalised.append(question)
+
+    exam_max_score = _float_or_none(callback_context.state.get("max_score"))
+    if exam_max_score is not None and total_score > exam_max_score:
+        _append_validation_error(
+            callback_context,
+            f"graded_questions total {total_score:g} exceeds max_score {exam_max_score:g}",
+        )
+
+    return normalised
+
 
 def preprocessing_after_callback(callback_context: CallbackContext) -> None:
     raw_context = callback_context.state.get("preprocessing_context")
@@ -56,6 +157,7 @@ def grading_after_callback(callback_context: CallbackContext) -> None:
         if not graded:
             logger.error("GradingAgent returned empty graded_questions. Aborting pipeline.")
             raise ValueError("CRITICAL: GradingAgent produced zero graded questions.")
+        graded = _apply_score_safety_gates(callback_context, graded)
         callback_context.state["graded_questions"] = graded
         # Preserve per-question metrics for FinalAggregator persistence
         callback_context.state["confidences"] = [
@@ -74,22 +176,33 @@ def grading_after_callback(callback_context: CallbackContext) -> None:
 def referee_after_callback(callback_context: CallbackContext) -> None:
     raw_rep = callback_context.state.get("referee_report")
     if not raw_rep:
-        callback_context.state["referee_status"] = "COMPLETED"
+        if callback_context.state.get("referee_status") != "PENDING_REVIEW":
+            callback_context.state["referee_status"] = "COMPLETED"
         return
     try:
         data = json.loads(_clean_json(raw_rep))
-        callback_context.state["referee_status"] = data.get("status", "COMPLETED")
+        incoming_status = data.get("status", "COMPLETED")
+        if (
+            incoming_status == "PENDING_REVIEW"
+            or callback_context.state.get("referee_status") == "PENDING_REVIEW"
+            or callback_context.state.get("validation_errors")
+        ):
+            callback_context.state["referee_status"] = "PENDING_REVIEW"
+        else:
+            callback_context.state["referee_status"] = "COMPLETED"
         # Preserve referee metrics for FinalAggregator persistence
         callback_context.state["low_confidence_count"] = data.get("low_confidence_count", 0)
         callback_context.state["referee_corrections"] = data.get("corrected", [])
-        if data.get("status") == "PENDING_REVIEW":
-            logger.warning("[REFEREE AGENT]: Low confidence detected. Flagging for teacher review (HITL).")
+        if callback_context.state.get("referee_status") == "PENDING_REVIEW":
+            logger.warning("[REFEREE AGENT]: Safety gate triggered. Flagging for teacher review (HITL).")
         else:
             logger.info("RefereeAgent complete. Results verified with high confidence.")
         _log_agent_complete("RefereeAgent", "referee_report")
     except Exception as e:
         logger.error("Error parsing referee_report: %s", e, exc_info=True)
-        callback_context.state["referee_status"] = "COMPLETED"
+        _append_validation_error(
+            callback_context, f"RefereeAgent output is not valid JSON: {e}"
+        )
 
 
 def final_after_callback(callback_context: CallbackContext) -> None:

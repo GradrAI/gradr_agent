@@ -66,8 +66,8 @@ class AgentEngineApp(AdkApp):
         run_config: dict[str, Any] | None = None,
     ) -> Any:
         """Unary query method for standard HTTP clients."""
-        # Pipeline timeout: 5 minutes max for a complete grading run
-        pipeline_timeout = int(os.environ.get("PIPELINE_TIMEOUT_SECONDS", 300))
+        # Pipeline timeout: finite wall-clock cap for a complete grading run.
+        pipeline_timeout = int(os.environ.get("PIPELINE_TIMEOUT_SECONDS", 900))
         events = []
         try:
             async with asyncio.timeout(pipeline_timeout):

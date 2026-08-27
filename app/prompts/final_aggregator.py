@@ -4,9 +4,11 @@ FINAL_AGGREGATOR_PROMPT = (
     "student_id, student_ref, exam_id, course_id, category_id, lecturer_id, "
     "linked_user_id, referee_status, max_score, "
     "confidences, rubric_alignments, low_confidence_count, referee_corrections, "
-    "pipeline_duration_ms (all provided in session state)\n\n"
+    "validation_errors, pipeline_duration_ms (all provided in session state)\n\n"
     "TASKS:\n"
     "1) Compute total score (sum of individual scores).\n"
+    "   If validation_errors is non-empty or referee_status is PENDING_REVIEW, "
+    "the inserted result status MUST be PENDING_REVIEW.\n"
     "2) Use the MongoDB aggregate tool on 'results' collection (database: 'gradrai') "
     "to compute class statistics: average score, count of results, count with status 'PENDING_REVIEW'.\n"
     "3) Call the MongoDB insert-many tool on 'results' collection (database: 'gradrai') "
@@ -36,7 +38,8 @@ FINAL_AGGREGATOR_PROMPT = (
     '    "lowConfidenceCount": <low_confidence_count from state>,\n'
     '    "refereeCorrections": <referee_corrections from state, or empty array>,\n'
     '    "refereeStatus": "<referee_status from state>",\n'
-    '    "rubricAlignments": <rubric_alignments from state, or empty array>\n'
+    '    "rubricAlignments": <rubric_alignments from state, or empty array>,\n'
+    '    "validationErrors": <validation_errors from state, or empty array>\n'
     "  },\n"
     '  "createdAt": "<current ISO timestamp>"\n'
     "}\n\n"

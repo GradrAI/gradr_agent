@@ -15,7 +15,7 @@ def create_weakness_detection_agent() -> Agent:
         name="WeaknessDetectionAgent",
         model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
         instruction=WEAKNESS_PROMPT,
-        tools=[mongo_mcp_toolset],
+        tools=[mongo_mcp_toolset, custom_mcp_toolset],
         output_key="weakness_profile_raw",
         after_agent_callback=weakness_after_callback,
     )
