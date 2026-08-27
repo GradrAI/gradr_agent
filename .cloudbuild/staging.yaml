@@ -33,33 +33,33 @@ steps:
         uv run python -m app.app_utils.deploy \
           --project ${_STAGING_PROJECT_ID} \
           --location ${_REGION} \
-          --display-name=pbt-grading-agent \
+          --display-name=gradr-pbt-agent \
           --source-packages=./app \
           --entrypoint-module=app.agent_engine_app \
           --entrypoint-object=pbt_pipeline_engine \
           --requirements-file=app/app_utils/.requirements.txt \
           --service-account=${_APP_SERVICE_ACCOUNT_STAGING} \
-          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING}"
+          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900"
         uv run python -m app.app_utils.deploy \
           --project ${_STAGING_PROJECT_ID} \
           --location ${_REGION} \
-          --display-name=cbt-grading-agent \
+          --display-name=gradr-cbt-grading-agent \
           --source-packages=./app \
           --entrypoint-module=app.agent_engine_app \
           --entrypoint-object=cbt_grading_engine \
           --requirements-file=app/app_utils/.requirements.txt \
           --service-account=${_APP_SERVICE_ACCOUNT_STAGING} \
-          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING}"
+          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900"
         uv run python -m app.app_utils.deploy \
           --project ${_STAGING_PROJECT_ID} \
           --location ${_REGION} \
-          --display-name=cbt-exam-agent \
+          --display-name=gradr-cbt-exam-agent \
           --source-packages=./app \
           --entrypoint-module=app.agent_engine_app \
           --entrypoint-object=cbt_exam_engine \
           --requirements-file=app/app_utils/.requirements.txt \
           --service-account=${_APP_SERVICE_ACCOUNT_STAGING} \
-          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING}"
+          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900"
     env:
       - 'PATH=/usr/local/bin:/usr/bin:~/.local/bin'
 

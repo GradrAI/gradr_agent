@@ -79,7 +79,7 @@ grading_agent = Agent(
     name="GradingAgent",
     model=Gemini(model="gemini-3.5-flash-lite", retry_options=retry_config),
     instruction=GRADER_PROMPT_BASE,
-    tools=[AgentTool(online_answers_agent), AgentTool(summarizer_agent)],
+    tools=[custom_mcp_toolset, AgentTool(online_answers_agent), AgentTool(summarizer_agent)],
     sub_agents=[online_answers_agent, summarizer_agent],
     output_key="graded_result",
     after_agent_callback=grading_after_callback,

@@ -20,6 +20,11 @@ PREPROCESSING_PROMPT = (
     "4) If a 'fileUrl' field is found on the marking guide resource, call the Cloud Storage MCP 'read_object' tool to fetch the full guide text. Pass the 'bucket' and 'name' extracted from the GCS URL (e.g. gs://bucket/name).\n"
     "5) Call the custom tool 'parse_marking_guide' passing the guide text AND the retrieved "
     "'maxScoreAttainable' (as the 'max_score' parameter) to produce a structured rubric.\n"
+    "5b) LONG GUIDE HANDLING: If the marking guide text exceeds 5000 characters, "
+    "use the 'chunk_marking_guide' tool instead of 'parse_marking_guide'. "
+    "Pass the guide text and max_score. Store the returned chunks in your state "
+    "as 'rubric_chunks' — the GradingAgent will use 'retrieve_rubric_chunks' "
+    "to fetch relevant rubric sections per question during grading.\n"
     "6) Use the MongoDB find tool on 'results' collection (database: 'gradrai') "
     "with filter using student_id to retrieve historical performance (limit 5, sort by createdAt desc).\n"
     "7) Call the Cloud Storage MCP 'read_object' tool to fetch the student script (PDF/Image) using the 'bucket' and 'name' extracted from script_gcs_uri. Use your native multimodal capabilities to analyze the fetched document, OCR the student script, and transcribe all handwritten answers.\n"
@@ -33,6 +38,7 @@ PREPROCESSING_PROMPT = (
     '  "max_score": number,\n'
     '  "exam_type": "string",\n'
     '  "rubric": {"rubric_items": [...], "max_score": number},\n'
+    '  "rubric_chunks": [{"id": 0, "text": "...", "embedding": [...]}] (only when chunked),\n'
     '  "historical_performance": [{"score": "...", "feedback": "...", "createdAt": "..."}],\n'
     '  "questions": [\n'
     '    {"question_id": "q1", "question": "...", "student_answer": "..."}\n'

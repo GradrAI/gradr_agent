@@ -52,6 +52,42 @@ def test_grading_after_callback_success():
     grading_after_callback(context)
     assert context.state["graded_questions"] == [{"id": 1, "score": 5}]
 
+def test_grading_after_callback_normalises_question_fields():
+    context = MockCallbackContext(state={
+        "graded_result": json.dumps({
+            "graded_questions": [
+                {
+                    "question_id": "q1",
+                    "score": 5,
+                    "max_score": 10,
+                    "justification": "Matched rubric point.",
+                }
+            ]
+        })
+    })
+    grading_after_callback(context)
+    assert context.state["graded_questions"][0]["questionId"] == "q1"
+    assert context.state["graded_questions"][0]["maxScore"] == 10
+    assert context.state["graded_questions"][0]["explanation"] == "Matched rubric point."
+
+
+def test_grading_after_callback_over_max_total_routes_pending_review():
+    context = MockCallbackContext(state={
+        "max_score": 60,
+        "graded_result": json.dumps({
+            "graded_questions": [
+                {"question_id": "q1", "score": 40, "max_score": 40},
+                {"question_id": "q2", "score": 30, "max_score": 30},
+            ]
+        })
+    })
+    grading_after_callback(context)
+    assert context.state["referee_status"] == "PENDING_REVIEW"
+    assert context.state["validation_errors"] == [
+        "graded_questions total 70 exceeds max_score 60"
+    ]
+
+
 def test_grading_after_callback_empty():
     context = MockCallbackContext(state={
         "graded_result": json.dumps({"graded_questions": []})
@@ -66,10 +102,32 @@ def test_grading_after_callback_no_output():
 
 def test_referee_after_callback_success():
     context = MockCallbackContext(state={
-        "referee_report": json.dumps({"status": "VERIFIED"})
+        "referee_report": json.dumps({"status": "COMPLETED"})
     })
     referee_after_callback(context)
-    assert context.state["referee_status"] == "VERIFIED"
+    assert context.state["referee_status"] == "COMPLETED"
+
+
+def test_referee_after_callback_preserves_pending_from_score_gate():
+    context = MockCallbackContext(state={
+        "referee_status": "PENDING_REVIEW",
+        "validation_errors": ["graded_questions total 70 exceeds max_score 60"],
+        "referee_report": json.dumps({"status": "COMPLETED"}),
+    })
+    referee_after_callback(context)
+    assert context.state["referee_status"] == "PENDING_REVIEW"
+
+
+def test_referee_after_callback_parse_failure_routes_pending_review():
+    context = MockCallbackContext(state={
+        "referee_report": "{not-valid-json"
+    })
+    referee_after_callback(context)
+    assert context.state["referee_status"] == "PENDING_REVIEW"
+    assert context.state["validation_errors"][0].startswith(
+        "RefereeAgent output is not valid JSON:"
+    )
+
 
 def test_weakness_after_callback_success():
     context = MockCallbackContext(state={
