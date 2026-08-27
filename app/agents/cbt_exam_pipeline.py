@@ -3,9 +3,9 @@ import logging
 from google.adk.agents import Agent, SequentialAgent
 from google.adk.models.google_llm import Gemini
 
-from app.toolsets import retry_config
-
+from app.agents.model_config import ADVANCED_GEMINI_MODEL, LIGHTWEIGHT_GEMINI_MODEL
 from app.callbacks import generic_callback, skip_if_extract_only
+from app.toolsets import retry_config
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ STANDARD_RULES = (
 
 topic_extraction_agent = Agent(
     name="TopicExtractionAgent",
-    model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
+    model=Gemini(model=LIGHTWEIGHT_GEMINI_MODEL, retry_options=retry_config),
     instruction=(
         "<role>\n"
         "You are the TopicExtractionAgent, an elite academic content parser and educational researcher. "
@@ -86,7 +86,7 @@ topic_extraction_agent = Agent(
 
 question_generation_agent = Agent(
     name="QuestionGenerationAgent",
-    model=Gemini(model="gemini-3.5-flash-lite", retry_options=retry_config),
+    model=Gemini(model=ADVANCED_GEMINI_MODEL, retry_options=retry_config),
     instruction=(
         "<role>\n"
         "You are a senior academic curriculum mapping specialist. Your expertise lies in crafting challenging, curriculum-aligned assessments that definitively test human comprehension.\n"

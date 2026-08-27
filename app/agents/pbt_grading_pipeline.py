@@ -18,6 +18,7 @@ from google.adk.agents import Agent, SequentialAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools import AgentTool, google_search
 
+from app.agents.model_config import ADVANCED_GEMINI_MODEL, LIGHTWEIGHT_GEMINI_MODEL
 from app.agents.shared_agents import (
     create_smart_prep_agent,
     create_weakness_detection_agent,
@@ -53,7 +54,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 preprocessing_agent = Agent(
     name="PreprocessingAgent",
-    model=Gemini(model="gemini-3.5-flash-lite", retry_options=retry_config),
+    model=Gemini(model=ADVANCED_GEMINI_MODEL, retry_options=retry_config),
     instruction=PREPROCESSING_PROMPT,
     tools=[custom_mcp_toolset, mongo_mcp_toolset, gcs_mcp_toolset],
     output_key="preprocessing_context",
@@ -62,7 +63,7 @@ preprocessing_agent = Agent(
 
 online_answers_agent = Agent(
     name="OnlineAnswersAgent",
-    model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
+    model=Gemini(model=LIGHTWEIGHT_GEMINI_MODEL, retry_options=retry_config),
     instruction=ONLINE_ANSWERS_PROMPT,
     tools=[google_search],
     output_key="online_answers",
@@ -70,14 +71,14 @@ online_answers_agent = Agent(
 
 summarizer_agent = Agent(
     name="SummarizerAgent",
-    model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
+    model=Gemini(model=LIGHTWEIGHT_GEMINI_MODEL, retry_options=retry_config),
     instruction=SUMMARIZER_PROMPT,
     output_key="final_summary",
 )
 
 grading_agent = Agent(
     name="GradingAgent",
-    model=Gemini(model="gemini-3.5-flash-lite", retry_options=retry_config),
+    model=Gemini(model=ADVANCED_GEMINI_MODEL, retry_options=retry_config),
     instruction=GRADER_PROMPT_BASE,
     tools=[custom_mcp_toolset, AgentTool(online_answers_agent), AgentTool(summarizer_agent)],
     sub_agents=[online_answers_agent, summarizer_agent],
@@ -87,7 +88,7 @@ grading_agent = Agent(
 
 referee_agent = Agent(
     name="RefereeAgent",
-    model=Gemini(model="gemini-3.5-flash-lite", retry_options=retry_config),
+    model=Gemini(model=ADVANCED_GEMINI_MODEL, retry_options=retry_config),
     instruction=REFEREE_PROMPT,
     tools=[mongo_mcp_toolset],
     output_key="referee_report",
@@ -96,7 +97,7 @@ referee_agent = Agent(
 
 final_aggregator = Agent(
     name="FinalAggregator",
-    model=Gemini(model="gemini-3.1-flash-lite", retry_options=retry_config),
+    model=Gemini(model=LIGHTWEIGHT_GEMINI_MODEL, retry_options=retry_config),
     instruction=FINAL_AGGREGATOR_PROMPT,
     tools=[mongo_mcp_toolset],
     output_key="final_payload",

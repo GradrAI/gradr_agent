@@ -33,6 +33,9 @@ playground:
 # in the grading pipelines silently fails.
 MDB_MCP_CONNECTION_STRING ?= $(shell sed -n 's/^MDB_MCP_CONNECTION_STRING=//p' .env 2>/dev/null | tr -d "\"'" | head -1)
 
+# Gemini calls should use the global endpoint; Agent Engine itself remains regional.
+AGENT_RUNTIME_ENV = GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900
+
 # Fail loudly rather than shipping an agent that cannot reach the database.
 check-mdb:
 	@test -n '$(MDB_MCP_CONNECTION_STRING)' || { \
@@ -55,7 +58,7 @@ deploy-pbt: check-mdb export-reqs
 		--entrypoint-module=app.agent_engine_app \
 		--entrypoint-object=pbt_pipeline_engine \
 		--display-name="gradr-pbt-agent" \
-		--set-env-vars='MDB_MCP_CONNECTION_STRING=$(MDB_MCP_CONNECTION_STRING)' \
+		--set-env-vars='MDB_MCP_CONNECTION_STRING=$(MDB_MCP_CONNECTION_STRING),$(AGENT_RUNTIME_ENV)' \
 		--requirements-file=app/app_utils/.requirements.txt
 
 # Deploy CBT Grading Agent
@@ -65,7 +68,7 @@ deploy-cbt-grading: check-mdb export-reqs
 		--entrypoint-module=app.agent_engine_app \
 		--entrypoint-object=cbt_grading_engine \
 		--display-name="gradr-cbt-grading-agent" \
-		--set-env-vars='MDB_MCP_CONNECTION_STRING=$(MDB_MCP_CONNECTION_STRING)' \
+		--set-env-vars='MDB_MCP_CONNECTION_STRING=$(MDB_MCP_CONNECTION_STRING),$(AGENT_RUNTIME_ENV)' \
 		--requirements-file=app/app_utils/.requirements.txt
 
 # Deploy CBT Exam Generation Agent
@@ -78,6 +81,7 @@ deploy-cbt-exam: export-reqs
 		--entrypoint-module=app.agent_engine_app \
 		--entrypoint-object=cbt_exam_engine \
 		--display-name="gradr-cbt-exam-agent" \
+		--set-env-vars='$(AGENT_RUNTIME_ENV)' \
 		--requirements-file=app/app_utils/.requirements.txt
 
 # Deploy all agents
