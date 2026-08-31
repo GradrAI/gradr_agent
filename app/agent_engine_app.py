@@ -53,14 +53,13 @@ def configure_gemini_vertex_env() -> None:
 class AgentEngineApp(AdkApp):
     def set_up(self) -> None:
         """Initialize the agent engine app with logging and telemetry."""
-        configure_gemini_vertex_env()
         vertexai.init()
         setup_telemetry()
         super().set_up()
+        configure_gemini_vertex_env()
         logging.basicConfig(level=logging.INFO)
         logging_client = google_cloud_logging.Client()
         self.logger = logging_client.logger(__name__)
-
 
     def register_feedback(self, feedback: dict[str, Any]) -> None:
         """Collect and log feedback."""
