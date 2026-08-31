@@ -18,8 +18,10 @@ def _uses_vertexai() -> bool:
 
 
 def _model_project() -> str | None:
-    return os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get(
-        "GOOGLE_CLOUD_QUOTA_PROJECT"
+    return (
+        os.environ.get("GRADR_GEMINI_MODEL_PROJECT")
+        or os.environ.get("GOOGLE_CLOUD_PROJECT")
+        or os.environ.get("GOOGLE_CLOUD_QUOTA_PROJECT")
     )
 
 

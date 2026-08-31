@@ -248,7 +248,7 @@ def deploy_agent_engine_app(
     if not project:
         _, project = google.auth.default()
     if project:
-        env_vars.setdefault("GOOGLE_CLOUD_PROJECT", project)
+        env_vars.setdefault("GRADR_GEMINI_MODEL_PROJECT", project)
 
     # Set GOOGLE_CLOUD_REGION to match deployment location
     env_vars["GOOGLE_CLOUD_REGION"] = location
