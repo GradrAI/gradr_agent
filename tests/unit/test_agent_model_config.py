@@ -15,19 +15,19 @@ def _walk_agents(agent):
         yield from _walk_agents(child)
 
 
-def test_extract_topics_uses_regionally_available_default_model() -> None:
+def test_extract_topics_uses_gemini_3_lightweight_default_model() -> None:
     assert isinstance(topic_extraction_agent.model, Gemini)
     assert topic_extraction_agent.model.model == LIGHTWEIGHT_GEMINI_MODEL
-    assert LIGHTWEIGHT_GEMINI_MODEL == "gemini-2.5-flash-lite"
+    assert LIGHTWEIGHT_GEMINI_MODEL == "gemini-3.1-flash-lite"
 
 
-def test_question_generation_uses_regionally_available_default_model() -> None:
+def test_question_generation_uses_gemini_3_advanced_default_model() -> None:
     assert isinstance(question_generation_agent.model, Gemini)
     assert question_generation_agent.model.model == ADVANCED_GEMINI_MODEL
-    assert ADVANCED_GEMINI_MODEL == "gemini-2.5-flash"
+    assert ADVANCED_GEMINI_MODEL == "gemini-3.5-flash-lite"
 
 
-def test_deployed_pipelines_do_not_default_to_gemini_3_preview_models() -> None:
+def test_deployed_pipelines_default_to_gemini_3_models() -> None:
     models = {
         child.model.model
         for pipeline in (cbt_grading_pipeline, pbt_grading_pipeline)
@@ -36,4 +36,4 @@ def test_deployed_pipelines_do_not_default_to_gemini_3_preview_models() -> None:
     }
 
     assert models == {LIGHTWEIGHT_GEMINI_MODEL, ADVANCED_GEMINI_MODEL}
-    assert not any(model.startswith("gemini-3") for model in models)
+    assert all(model.startswith("gemini-3") for model in models)

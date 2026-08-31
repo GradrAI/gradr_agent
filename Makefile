@@ -33,8 +33,11 @@ playground:
 # in the grading pipelines silently fails.
 MDB_MCP_CONNECTION_STRING ?= $(shell sed -n 's/^MDB_MCP_CONNECTION_STRING=//p' .env 2>/dev/null | tr -d "\"'" | head -1)
 
-# Gemini calls should use the global endpoint; Agent Engine itself remains regional.
-AGENT_RUNTIME_ENV = GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900
+# Gemini 3 Flash models are available to this project via the global endpoint;
+# Agent Runtime itself remains deployed in us-central1.
+GRADR_LIGHTWEIGHT_GEMINI_MODEL ?= gemini-3.1-flash-lite
+GRADR_ADVANCED_GEMINI_MODEL ?= gemini-3.5-flash-lite
+AGENT_RUNTIME_ENV = GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900,GRADR_LIGHTWEIGHT_GEMINI_MODEL=$(GRADR_LIGHTWEIGHT_GEMINI_MODEL),GRADR_ADVANCED_GEMINI_MODEL=$(GRADR_ADVANCED_GEMINI_MODEL)
 
 # Fail loudly rather than shipping an agent that cannot reach the database.
 check-mdb:

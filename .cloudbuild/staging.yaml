@@ -39,7 +39,7 @@ steps:
           --entrypoint-object=pbt_pipeline_engine \
           --requirements-file=app/app_utils/.requirements.txt \
           --service-account=${_APP_SERVICE_ACCOUNT_STAGING} \
-          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900"
+          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900,GRADR_LIGHTWEIGHT_GEMINI_MODEL=gemini-3.1-flash-lite,GRADR_ADVANCED_GEMINI_MODEL=gemini-3.5-flash-lite"
         uv run python -m app.app_utils.deploy \
           --project ${_STAGING_PROJECT_ID} \
           --location ${_REGION} \
@@ -49,7 +49,7 @@ steps:
           --entrypoint-object=cbt_grading_engine \
           --requirements-file=app/app_utils/.requirements.txt \
           --service-account=${_APP_SERVICE_ACCOUNT_STAGING} \
-          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900"
+          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900,GRADR_LIGHTWEIGHT_GEMINI_MODEL=gemini-3.1-flash-lite,GRADR_ADVANCED_GEMINI_MODEL=gemini-3.5-flash-lite"
         uv run python -m app.app_utils.deploy \
           --project ${_STAGING_PROJECT_ID} \
           --location ${_REGION} \
@@ -59,7 +59,7 @@ steps:
           --entrypoint-object=cbt_exam_engine \
           --requirements-file=app/app_utils/.requirements.txt \
           --service-account=${_APP_SERVICE_ACCOUNT_STAGING} \
-          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900"
+          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900,GRADR_LIGHTWEIGHT_GEMINI_MODEL=gemini-3.1-flash-lite,GRADR_ADVANCED_GEMINI_MODEL=gemini-3.5-flash-lite"
     env:
       - 'PATH=/usr/local/bin:/usr/bin:~/.local/bin'
 
