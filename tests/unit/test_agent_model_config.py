@@ -1,3 +1,5 @@
+import os
+
 from google.adk.models.google_llm import Gemini
 
 from app.agents.cbt_exam_pipeline import (
@@ -76,3 +78,17 @@ def test_resolve_gemini_model_preserves_explicit_resource(monkeypatch) -> None:
 
     model = "projects/example/locations/global/publishers/google/models/gemini-3.1-flash-lite"
     assert resolve_gemini_model(model) == model
+
+
+def test_agent_engine_app_configures_global_genai_env(monkeypatch) -> None:
+    from app.agent_engine_app import configure_gemini_vertex_env
+
+    monkeypatch.setenv("GRADR_GEMINI_MODEL_LOCATION", "global")
+    monkeypatch.setenv("GRADR_GEMINI_MODEL_PROJECT", "gradr-421618")
+    monkeypatch.setenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+
+    configure_gemini_vertex_env()
+
+    assert os.environ["GOOGLE_CLOUD_LOCATION"] == "global"
+    assert os.environ["GOOGLE_CLOUD_PROJECT"] == "gradr-421618"

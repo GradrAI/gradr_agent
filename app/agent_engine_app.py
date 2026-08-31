@@ -39,18 +39,28 @@ cbt_grading_app = App(root_agent=cbt_grading_pipeline, name="cbt_grading_app")
 cbt_exam_app = App(root_agent=cbt_exam_generation_pipeline, name="cbt_exam_app")
 
 
+def configure_gemini_vertex_env() -> None:
+    """Point google-genai at the Gemini model endpoint, not the runtime region."""
+    gemini_project = os.environ.get("GRADR_GEMINI_MODEL_PROJECT")
+    if gemini_project:
+        os.environ["GOOGLE_CLOUD_PROJECT"] = gemini_project
+
+    gemini_location = os.environ.get("GRADR_GEMINI_MODEL_LOCATION")
+    if gemini_location:
+        os.environ["GOOGLE_CLOUD_LOCATION"] = gemini_location
+
+
 class AgentEngineApp(AdkApp):
     def set_up(self) -> None:
         """Initialize the agent engine app with logging and telemetry."""
+        configure_gemini_vertex_env()
         vertexai.init()
         setup_telemetry()
         super().set_up()
         logging.basicConfig(level=logging.INFO)
         logging_client = google_cloud_logging.Client()
         self.logger = logging_client.logger(__name__)
-        location = os.environ.get("GOOGLE_CLOUD_LOCATION")
-        if location:
-            os.environ["GOOGLE_CLOUD_LOCATION"] = location
+
 
     def register_feedback(self, feedback: dict[str, Any]) -> None:
         """Collect and log feedback."""
