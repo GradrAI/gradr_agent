@@ -30,6 +30,7 @@ steps:
       - "-c"
       - |
         uv export --no-hashes --no-sources --no-header --no-dev --no-emit-project --no-annotate --locked > app/app_utils/.requirements.txt
+        AGENT_RUNTIME_ENV="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=${_GEMINI_LOCATION},GOOGLE_GENAI_USE_VERTEXAI=${_GOOGLE_GENAI_USE_VERTEXAI},PIPELINE_TIMEOUT_SECONDS=${_PIPELINE_TIMEOUT_SECONDS},GRADR_LIGHTWEIGHT_GEMINI_MODEL=${_GRADR_LIGHTWEIGHT_GEMINI_MODEL},GRADR_ADVANCED_GEMINI_MODEL=${_GRADR_ADVANCED_GEMINI_MODEL}"
         uv run python -m app.app_utils.deploy \
           --project ${_STAGING_PROJECT_ID} \
           --location ${_REGION} \
@@ -39,7 +40,7 @@ steps:
           --entrypoint-object=pbt_pipeline_engine \
           --requirements-file=app/app_utils/.requirements.txt \
           --service-account=${_APP_SERVICE_ACCOUNT_STAGING} \
-          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900,GRADR_LIGHTWEIGHT_GEMINI_MODEL=gemini-3.1-flash-lite,GRADR_ADVANCED_GEMINI_MODEL=gemini-3.5-flash-lite"
+          --set-env-vars="${AGENT_RUNTIME_ENV}"
         uv run python -m app.app_utils.deploy \
           --project ${_STAGING_PROJECT_ID} \
           --location ${_REGION} \
@@ -49,7 +50,7 @@ steps:
           --entrypoint-object=cbt_grading_engine \
           --requirements-file=app/app_utils/.requirements.txt \
           --service-account=${_APP_SERVICE_ACCOUNT_STAGING} \
-          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900,GRADR_LIGHTWEIGHT_GEMINI_MODEL=gemini-3.1-flash-lite,GRADR_ADVANCED_GEMINI_MODEL=gemini-3.5-flash-lite"
+          --set-env-vars="${AGENT_RUNTIME_ENV}"
         uv run python -m app.app_utils.deploy \
           --project ${_STAGING_PROJECT_ID} \
           --location ${_REGION} \
@@ -59,7 +60,7 @@ steps:
           --entrypoint-object=cbt_exam_engine \
           --requirements-file=app/app_utils/.requirements.txt \
           --service-account=${_APP_SERVICE_ACCOUNT_STAGING} \
-          --set-env-vars="COMMIT_SHA=${COMMIT_SHA},LOGS_BUCKET_NAME=${_LOGS_BUCKET_NAME_STAGING},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900,GRADR_LIGHTWEIGHT_GEMINI_MODEL=gemini-3.1-flash-lite,GRADR_ADVANCED_GEMINI_MODEL=gemini-3.5-flash-lite"
+          --set-env-vars="${AGENT_RUNTIME_ENV}"
     env:
       - 'PATH=/usr/local/bin:/usr/bin:~/.local/bin'
 
@@ -134,6 +135,11 @@ steps:
 substitutions:
   _STAGING_PROJECT_ID: YOUR_STAGING_PROJECT_ID
   _REGION: us-central1
+  _GEMINI_LOCATION: global
+  _GOOGLE_GENAI_USE_VERTEXAI: "True"
+  _PIPELINE_TIMEOUT_SECONDS: "900"
+  _GRADR_LIGHTWEIGHT_GEMINI_MODEL: gemini-3.1-flash-lite
+  _GRADR_ADVANCED_GEMINI_MODEL: gemini-3.5-flash-lite
 
 logsBucket: gs://${PROJECT_ID}-gradr-agent-logs/build-logs
 options:
