@@ -53,7 +53,7 @@ def test_deployed_pipelines_default_to_gemini_3_models() -> None:
 
 def test_resolve_gemini_3_model_pins_global_vertex_resource(monkeypatch) -> None:
     monkeypatch.setenv("GOOGLE_GENAI_USE_VERTEXAI", "True")
-    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "gradr-421618")
+    monkeypatch.setenv("GRADR_GEMINI_MODEL_PROJECT", "gradr-421618")
     monkeypatch.delenv("GRADR_GEMINI_MODEL_LOCATION", raising=False)
 
     assert resolve_gemini_model("gemini-3.1-flash-lite") == (
@@ -72,7 +72,7 @@ def test_resolve_gemini_3_model_pins_global_vertex_resource(monkeypatch) -> None
 
 def test_resolve_gemini_model_preserves_explicit_resource(monkeypatch) -> None:
     monkeypatch.setenv("GOOGLE_GENAI_USE_VERTEXAI", "True")
-    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "gradr-421618")
+    monkeypatch.setenv("GRADR_GEMINI_MODEL_PROJECT", "gradr-421618")
 
     model = "projects/example/locations/global/publishers/google/models/gemini-3.1-flash-lite"
     assert resolve_gemini_model(model) == model
