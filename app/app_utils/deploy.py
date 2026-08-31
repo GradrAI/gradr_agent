@@ -245,6 +245,11 @@ def deploy_agent_engine_app(
     env_vars = parse_key_value_pairs(set_env_vars)
     labels_dict = parse_key_value_pairs(labels)
 
+    if not project:
+        _, project = google.auth.default()
+    if project:
+        env_vars.setdefault("GOOGLE_CLOUD_PROJECT", project)
+
     # Set GOOGLE_CLOUD_REGION to match deployment location
     env_vars["GOOGLE_CLOUD_REGION"] = location
 
@@ -257,9 +262,6 @@ def deploy_agent_engine_app(
         env_vars["GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY"] = "true"
     if "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT" not in env_vars:
         env_vars["OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] = "true"
-
-    if not project:
-        _, project = google.auth.default()
 
     print("""
     ╔═══════════════════════════════════════════════════════════╗
