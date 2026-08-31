@@ -64,6 +64,27 @@ def parse_key_value_pairs(kv_string: str | None) -> dict[str, str]:
     return result
 
 
+SENSITIVE_ENV_NAME_FRAGMENTS = (
+    "API_KEY",
+    "CONNECTION_STRING",
+    "PASSWORD",
+    "SECRET",
+    "TOKEN",
+    "URI",
+)
+
+
+def is_sensitive_env_name(name: str) -> bool:
+    """Return True for environment variables that should not be printed."""
+    upper_name = name.upper()
+    return any(fragment in upper_name for fragment in SENSITIVE_ENV_NAME_FRAGMENTS)
+
+
+def display_env_value(name: str, value: str) -> str:
+    """Mask sensitive env var values before writing deployment logs."""
+    return "***" if is_sensitive_env_name(name) and value else value
+
+
 def write_deployment_metadata(
     remote_agent: Any,
     metadata_file: str = "deployment_metadata.json",
@@ -263,7 +284,7 @@ def deploy_agent_engine_app(
     if env_vars:
         click.echo("\n🌍 Environment Variables:")
         for key, value in sorted(env_vars.items()):
-            click.echo(f"  {key}: {value}")
+            click.echo(f"  {key}: {display_env_value(key, value)}")
 
     source_packages_list = list(source_packages)
 
