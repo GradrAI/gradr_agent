@@ -33,8 +33,11 @@ playground:
 # in the grading pipelines silently fails.
 MDB_MCP_CONNECTION_STRING ?= $(shell sed -n 's/^MDB_MCP_CONNECTION_STRING=//p' .env 2>/dev/null | tr -d "\"'" | head -1)
 
-# Gemini calls should use the global endpoint; Agent Engine itself remains regional.
-AGENT_RUNTIME_ENV = GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900
+# Gemini 3 Flash models are available to this project via the global endpoint;
+# Agent Runtime itself remains deployed in us-central1.
+GRADR_LIGHTWEIGHT_GEMINI_MODEL ?= gemini-3.1-flash-lite
+GRADR_ADVANCED_GEMINI_MODEL ?= gemini-3.5-flash-lite
+AGENT_RUNTIME_ENV = GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=True,PIPELINE_TIMEOUT_SECONDS=900,GRADR_LIGHTWEIGHT_GEMINI_MODEL=$(GRADR_LIGHTWEIGHT_GEMINI_MODEL),GRADR_ADVANCED_GEMINI_MODEL=$(GRADR_ADVANCED_GEMINI_MODEL)
 
 # Fail loudly rather than shipping an agent that cannot reach the database.
 check-mdb:
@@ -132,3 +135,108 @@ register-gemini-enterprise:
 # Run grading accuracy evaluation against gold-standard data
 eval-accuracy:
 	uv run python -m eval.compute_metrics --gold eval/gold_standard.json --output eval/results.json
+
+INTRO_PYTHON_DIR ?= /Users/macbookair/Downloads/GRADRAI_Introduction_To_Programming_Using_Python
+INTRO_PYTHON_SCORES ?= /Users/macbookair/Downloads/Introduction_to_Programming_Using_Python_Student_Scores.pdf
+INTRO_PYTHON_OUT ?= eval/runs/intro-python-smoke
+INTRO_PYTHON_SCRIPT_IDS ?= 1,2
+INTRO_PYTHON_MODEL ?= gemini-3.5-flash-lite
+INTRO_PYTHON_LECTURE_1 ?= /Users/macbookair/Downloads/Algorithm and flowcharts.pdf
+INTRO_PYTHON_LECTURE_2 ?= /Users/macbookair/Downloads/Foundations_of_Programming_Upgraded (1).pptx
+INTRO_PYTHON_LECTURE_3 ?= /Users/macbookair/Downloads/lesson1-introduction to programming.pdf
+INTRO_PYTHON_RUBRIC ?= eval/rubric_corrected_intro_python.json
+INTRO_PYTHON_STAGED_OUT ?= eval/runs/intro-python-staged-corrected
+INTRO_PYTHON_ORIGINAL_SCORE_SHEET ?= eval/runs/intro-python-full-global-ablation-20260826T124102Z/paper_tables/per_question_labels.original.csv
+INTRO_PYTHON_GRADER2_SCORE_SHEET ?= eval/runs/intro-python-full-global-ablation-20260826T124102Z/paper_tables/per_question_labels.grader2.csv
+
+INTRO_PYTHON_LECTURE_ARGS = --lecture-material "$(INTRO_PYTHON_LECTURE_1)" \
+	--lecture-material "$(INTRO_PYTHON_LECTURE_2)" \
+	--lecture-material "$(INTRO_PYTHON_LECTURE_3)"
+
+eval-intro-python-dry-run:
+	PYTHONPATH=$(PWD) uv run --extra eval python -m eval.intro_python_experiment \
+		--scripts-dir "$(INTRO_PYTHON_DIR)" \
+		--scores-pdf "$(INTRO_PYTHON_SCORES)" \
+		$(INTRO_PYTHON_LECTURE_ARGS) \
+		--script-ids "$(INTRO_PYTHON_SCRIPT_IDS)" \
+		--out-dir "$(INTRO_PYTHON_OUT)" \
+		--model "$(INTRO_PYTHON_MODEL)" \
+		--lecture-mode summary \
+		--dry-run --overwrite
+
+eval-intro-python-smoke:
+	PYTHONPATH=$(PWD) uv run --extra eval python -m eval.intro_python_experiment \
+		--scripts-dir "$(INTRO_PYTHON_DIR)" \
+		--scores-pdf "$(INTRO_PYTHON_SCORES)" \
+		$(INTRO_PYTHON_LECTURE_ARGS) \
+		--script-ids "$(INTRO_PYTHON_SCRIPT_IDS)" \
+		--out-dir "$(INTRO_PYTHON_OUT)" \
+		--model "$(INTRO_PYTHON_MODEL)" \
+		--lecture-mode summary \
+		--overwrite
+
+eval-intro-python-ablation:
+	PYTHONPATH=$(PWD) uv run --extra eval python -m eval.intro_python_experiment \
+		--scripts-dir "$(INTRO_PYTHON_DIR)" \
+		--scores-pdf "$(INTRO_PYTHON_SCORES)" \
+		$(INTRO_PYTHON_LECTURE_ARGS) \
+		--script-ids "$(INTRO_PYTHON_SCRIPT_IDS)" \
+		--out-dir "$(INTRO_PYTHON_OUT)" \
+		--model "$(INTRO_PYTHON_MODEL)" \
+		--lecture-mode summary \
+		--run-lecture-ablation --overwrite
+
+eval-intro-python-metrics:
+	PYTHONPATH=$(PWD) uv run --extra eval python -m eval.compute_metrics \
+		--scores-pdf "$(INTRO_PYTHON_SCORES)" \
+		--predictions "$(INTRO_PYTHON_OUT)/predictions.jsonl" \
+		--output "$(INTRO_PYTHON_OUT)/metrics-recomputed.json"
+
+eval-intro-python-staged-dry-run:
+	PYTHONPATH=$(PWD) GOOGLE_CLOUD_LOCATION=global uv run --extra eval python -m eval.staged_intro_python_experiment \
+		--scripts-dir "$(INTRO_PYTHON_DIR)" \
+		--scores-pdf "$(INTRO_PYTHON_SCORES)" \
+		$(INTRO_PYTHON_LECTURE_ARGS) \
+		--script-ids "$(INTRO_PYTHON_SCRIPT_IDS)" \
+		--rubric-json "$(INTRO_PYTHON_RUBRIC)" \
+		--out-dir "$(INTRO_PYTHON_STAGED_OUT)-smoke" \
+		--model "$(INTRO_PYTHON_MODEL)" \
+		--lecture-mode summary \
+		--dry-run --overwrite
+
+eval-intro-python-staged-smoke:
+	PYTHONPATH=$(PWD) GOOGLE_CLOUD_PROJECT=gradr-421618 GOOGLE_CLOUD_LOCATION=global uv run --extra eval python -m eval.staged_intro_python_experiment \
+		--scripts-dir "$(INTRO_PYTHON_DIR)" \
+		--scores-pdf "$(INTRO_PYTHON_SCORES)" \
+		$(INTRO_PYTHON_LECTURE_ARGS) \
+		--script-ids "3,11,30,53" \
+		--rubric-json "$(INTRO_PYTHON_RUBRIC)" \
+		--out-dir "$(INTRO_PYTHON_STAGED_OUT)-smoke" \
+		--model "$(INTRO_PYTHON_MODEL)" \
+		--lecture-mode summary \
+		--run-lecture-ablation --overwrite
+
+eval-intro-python-staged-ablation:
+	PYTHONPATH=$(PWD) GOOGLE_CLOUD_PROJECT=gradr-421618 GOOGLE_CLOUD_LOCATION=global uv run --extra eval python -m eval.staged_intro_python_experiment \
+		--scripts-dir "$(INTRO_PYTHON_DIR)" \
+		--scores-pdf "$(INTRO_PYTHON_SCORES)" \
+		$(INTRO_PYTHON_LECTURE_ARGS) \
+		--rubric-json "$(INTRO_PYTHON_RUBRIC)" \
+		--out-dir "$(INTRO_PYTHON_STAGED_OUT)" \
+		--model "$(INTRO_PYTHON_MODEL)" \
+		--lecture-mode summary \
+		--run-lecture-ablation --allow-full-run-after-review \
+		--approval-note "Corrected rubric staged full rerun with saved extraction artifacts, best-four equal-weighted finalization, and lecture/no-lecture ablation." \
+		--overwrite
+
+eval-intro-python-staged-metrics:
+	PYTHONPATH=$(PWD) uv run --extra eval python -m eval.compute_metrics \
+		--corrected-staged \
+		--predictions-no-lecture "$(INTRO_PYTHON_STAGED_OUT)/predictions.no_lecture.jsonl" \
+		--predictions-lecture "$(INTRO_PYTHON_STAGED_OUT)/predictions.lecture.jsonl" \
+		--extractions "$(INTRO_PYTHON_STAGED_OUT)/extractions.jsonl" \
+		--rubric-json "$(INTRO_PYTHON_RUBRIC)" \
+		--original-score-sheet "$(INTRO_PYTHON_ORIGINAL_SCORE_SHEET)" \
+		--grader2-score-sheet "$(INTRO_PYTHON_GRADER2_SCORE_SHEET)" \
+		--write-paper-tables "$(INTRO_PYTHON_STAGED_OUT)/paper_tables" \
+		--output "$(INTRO_PYTHON_STAGED_OUT)/metrics.corrected_staged.json"

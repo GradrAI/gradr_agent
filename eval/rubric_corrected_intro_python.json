@@ -1,0 +1,54 @@
+{
+  "exam": "Introduction to Programming Using Python",
+  "total_max_score": 60,
+  "allowed_question_count": 4,
+  "selection_policy": "best_4_equal_weighted",
+  "manual_corrections_apply_globally": true,
+  "questions": [
+    {
+      "question_id": "q1",
+      "raw_max_score": 18,
+      "parts": [
+        {"label": "a", "max_score": 8},
+        {"label": "b", "max_score": 4},
+        {"label": "c", "max_score": 6}
+      ]
+    },
+    {
+      "question_id": "q2",
+      "raw_max_score": 17,
+      "parts": [
+        {"label": "a", "max_score": 8},
+        {"label": "b", "max_score": 4},
+        {"label": "c", "max_score": 5}
+      ]
+    },
+    {
+      "question_id": "q3",
+      "raw_max_score": 17,
+      "parts": [
+        {"label": "a", "max_score": 9},
+        {"label": "b", "max_score": 3},
+        {"label": "c", "max_score": 5}
+      ]
+    },
+    {
+      "question_id": "q4",
+      "raw_max_score": 17,
+      "parts": [
+        {"label": "a", "max_score": 8},
+        {"label": "b", "max_score": 4},
+        {"label": "c", "max_score": 5}
+      ]
+    },
+    {
+      "question_id": "q5",
+      "raw_max_score": 24,
+      "parts": [
+        {"label": "a", "max_score": 6},
+        {"label": "b", "max_score": 8},
+        {"label": "c", "max_score": 10}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "review_policy": {
+    "low_confidence_threshold": 0.7,
+    "pending_review_status": "PENDING_REVIEW",
+    "completed_status": "COMPLETED",
+    "pending_if_validation_errors": true,
+    "pending_if_transcription_warnings": true,
+    "pending_if_low_confidence": true
+  },
+  "actions": {
+    "persist_completed_result": {
+      "description": "Persist a result as completed without human review.",
+      "user_visible_or_persistent": true,
+      "allowed_when": {
+        "review_status": "COMPLETED",
+        "validation_errors_empty": true,
+        "transcription_warnings_empty": true,
+        "contract_violations_empty": true
+      }
+    },
+    "student_facing_feedback": {
+      "description": "Generate or expose feedback to a learner.",
+      "user_visible_or_persistent": true,
+      "allowed_when": {
+        "review_status": "COMPLETED",
+        "validation_errors_empty": true,
+        "transcription_warnings_empty": true,
+        "contract_violations_empty": true
+      }
+    },
+    "weakness_profile_update": {
+      "description": "Update a learner weakness profile or class weakness aggregate.",
+      "user_visible_or_persistent": true,
+      "allowed_when": {
+        "review_status": "COMPLETED",
+        "validation_errors_empty": true,
+        "transcription_warnings_empty": true,
+        "contract_violations_empty": true
+      }
+    },
+    "smartprep_generation": {
+      "description": "Generate a personalized remediation or practice-session proposal.",
+      "user_visible_or_persistent": true,
+      "allowed_when": {
+        "review_status": "COMPLETED",
+        "validation_errors_empty": true,
+        "transcription_warnings_empty": true,
+        "contract_violations_empty": true,
+        "linked_user_required": true,
+        "exam_type_in": ["utme", "wassce", "post-utme", "neco"]
+      }
+    },
+    "route_human_review": {
+      "description": "Route the artifact to human review.",
+      "user_visible_or_persistent": false,
+      "allowed_when": {
+        "review_status": "PENDING_REVIEW"
+      }
+    }
+  },
+  "default_student_context": {
+    "student_id": "anonymous-script",
+    "linked_user_id": "anonymous-linked-user"
+  },
+  "default_exam_context": {
+    "exam_type": "wassce",
+    "max_score": 60.0
+  }
+}

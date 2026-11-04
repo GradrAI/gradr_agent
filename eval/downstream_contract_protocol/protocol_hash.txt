@@ -1,0 +1,9 @@
+6707d87ddba6f445f5fd8166b628b77cb537efbba34d1c6529a771057d5b6245
+
+Hashed files, in order:
+- protocol.md
+- fault_library.json
+- action_contracts.json
+- analysis_plan.md
+
+Hash construction: SHA-256 over each file name, NUL byte, file bytes, NUL byte.

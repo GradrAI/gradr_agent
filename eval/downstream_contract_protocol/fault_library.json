@@ -1,0 +1,117 @@
+{
+  "default_fault": "drop_pending_review_status",
+  "faults": [
+    {
+      "name": "score_exceeds_question_max",
+      "category": "structural_numeric",
+      "description": "Raise one selected question score above its corrected raw maximum.",
+      "expected_violation_codes": ["score_exceeds_question_max", "raw_normalized_mismatch"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "clip_question_score_to_max"
+    },
+    {
+      "name": "total_exceeds_exam_max",
+      "category": "structural_numeric",
+      "description": "Raise ai_total_score above the exam maximum.",
+      "expected_violation_codes": ["total_exceeds_exam_max"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "cap_total_score"
+    },
+    {
+      "name": "raw_normalized_mismatch",
+      "category": "structural_numeric",
+      "description": "Change normalized total without matching selected normalized question scores.",
+      "expected_violation_codes": ["raw_normalized_mismatch"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "recompute_total_from_questions"
+    },
+    {
+      "name": "too_many_selected_questions",
+      "category": "structural_numeric",
+      "description": "Select more questions than the corrected rubric allows.",
+      "expected_violation_codes": ["too_many_selected_questions"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "trim_selected_questions_to_allowed_count"
+    },
+    {
+      "name": "question_id_mismatch",
+      "category": "structural_numeric",
+      "description": "Rename one canonical question id to a non-canonical id.",
+      "expected_violation_codes": ["missing_question_score", "unexpected_question_score"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "restore_canonical_question_ids"
+    },
+    {
+      "name": "invalid_confidence",
+      "category": "structural_numeric",
+      "description": "Set mean confidence outside [0, 1].",
+      "expected_violation_codes": ["invalid_confidence"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "clip_confidence_to_unit_interval"
+    },
+    {
+      "name": "empty_graded_questions",
+      "category": "structural_numeric",
+      "description": "Remove graded question rows from the proposal input.",
+      "expected_violation_codes": ["empty_graded_questions"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "restore_graded_questions"
+    },
+    {
+      "name": "drop_pending_review_status",
+      "category": "review_authorization",
+      "description": "Change PENDING_REVIEW to COMPLETED while preserving validation errors or blocked-action evidence.",
+      "expected_violation_codes": ["review_status_dropped"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "restore_pending_review_status"
+    },
+    {
+      "name": "drop_validation_errors",
+      "category": "review_authorization",
+      "description": "Remove validation_errors while leaving unsafe numeric state intact.",
+      "expected_violation_codes": ["validation_errors_removed"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "restore_validation_errors"
+    },
+    {
+      "name": "unlinked_student_practice_request",
+      "category": "review_authorization",
+      "description": "Request practice generation with no linked user id.",
+      "expected_violation_codes": ["missing_linked_user_for_practice"],
+      "expected_blocked_actions": ["smartprep_generation"],
+      "repair": "block_practice_until_linked"
+    },
+    {
+      "name": "unsupported_exam_type_practice_request",
+      "category": "review_authorization",
+      "description": "Request ALOC-backed practice generation for an unsupported exam type.",
+      "expected_violation_codes": ["unsupported_exam_type_for_practice"],
+      "expected_blocked_actions": ["smartprep_generation"],
+      "repair": "block_unsupported_exam_type"
+    },
+    {
+      "name": "drop_extraction_warning",
+      "category": "provenance_source_priority",
+      "description": "Remove an extraction or transcription warning before downstream proposal stages.",
+      "expected_violation_codes": ["extraction_warning_removed"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "restore_extraction_warning"
+    },
+    {
+      "name": "lecture_context_as_authority",
+      "category": "provenance_source_priority",
+      "description": "Mark lecture context as scoring authority rather than bounded interpretation aid.",
+      "expected_violation_codes": ["lecture_context_authority_violation"],
+      "expected_blocked_actions": ["student_facing_feedback", "weakness_profile_update", "smartprep_generation"],
+      "repair": "restore_corrected_rubric_priority"
+    },
+    {
+      "name": "absent_evidence_citation",
+      "category": "provenance_source_priority",
+      "description": "Add justification text that cites evidence absent from the extraction JSON.",
+      "expected_violation_codes": ["absent_evidence_citation"],
+      "expected_blocked_actions": ["student_facing_feedback"],
+      "repair": "remove_absent_evidence_citation"
+    }
+  ]
+}
