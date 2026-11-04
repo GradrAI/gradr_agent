@@ -2,7 +2,7 @@
 
 An AI-powered grading agent built with Google's Agent Development Kit (ADK) and optimized for automated evaluation of handwritten and typed student submissions. This project extends the base ReAct agent from [googleCloudPlatform/agent-starter-pack](https://github.com/GoogleCloudPlatform/agent-starter-pack) (v0.21.0) and integrates tightly with Google Cloud (Vertex AI, BigQuery, Cloud Storage) to deliver high-accuracy automated grading.
 
-Gradr-Agent is part of the broader GradrAI system — a platform for automating grading of paper-based tests using advanced LLMs, prompt orchestration, evaluators, domain expert feedback, and custom MCP tools.
+Gradr-Agent is part of the broader GradrAI system — a platform for automating grading of paper-based tests using advanced LLMs, prompt orchestration, evaluators and domain expert feedback.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ Gradr-Agent is part of the broader GradrAI system — a platform for automating 
 
 ## System Architecture
 
-The full GradrAI platform consists of four services. The frontend and backend are closed-source, but the agent and MCP server repos are provided for review.
+The full GradrAI platform consists of three services. The frontend and backend are closed-source; the agent repo is provided for review.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -40,16 +40,15 @@ The full GradrAI platform consists of four services. The frontend and backend ar
 │                   │     Gradr-Agent (ADK)      │  ◀── This repo          │
 │                   │  Deployed on Vertex AI     │                         │
 │                   │  Reasoning Engine          │                         │
-│                   └─────┬──────┬──────┬───────┘                          │
-│                         │      │      │                                  │
-│              ┌──────────┘      │      └──────────┐                      │
-│              ▼                 ▼                  ▼                      │
-│  ┌────────────────┐  ┌──────────────┐  ┌──────────────────┐             │
-│  │  Gradr MCP     │  │  MongoDB MCP │  │  GCS MCP         │             │
-│  │  (Cloud Run)   │  │  (npx stdio) │  │  (npx stdio)     │             │
-│  │  Custom tools  │  │  DB read/    │  │  Cloud Storage   │             │
-│  │                │  │  write       │  │  access          │             │
-│  └────────────────┘  └──────────────┘  └──────────────────┘             │
+│                   │  Tool-free, JSON in/out    │                         │
+│                   └─────────────┬─────────────┘                          │
+│                                 │ gs:// file parts                       │
+│                                 ▼                                        │
+│                   ┌───────────────────────────┐                          │
+│                   │ Gemini on Vertex AI        │                         │
+│                   │ (reads scripts and guides  │                         │
+│                   │  from Cloud Storage)       │                         │
+│                   └───────────────────────────┘                          │
 │                                                                         │
 │  Supporting Infrastructure:                                             │
 │  ┌──────────┐  ┌──────────────┐  ┌─────────────┐  ┌───────────────┐    │
@@ -62,22 +61,19 @@ The full GradrAI platform consists of four services. The frontend and backend ar
 ### Request Flow (Paper-Based Test Grading)
 
 1. **Educator** uploads question paper, marking guide, and student scripts via the **frontend** (`gradrai.com`).
-2. **Backend** enqueues a grading job via BullMQ (Redis) and calls the **Vertex AI Reasoning Engine** API to invoke the agent.
-3. **Gradr-Agent** orchestrates a sequential pipeline of specialized sub-agents (see [Agent Pipelines](#agent-pipelines)).
-4. Each agent in the pipeline may call **MCP tools** (custom Gradr MCP, MongoDB MCP, GCS MCP) to read/write data.
-5. Results are persisted to **MongoDB** and the educator is notified.
+2. **Backend** enqueues a grading job via BullMQ (Redis), loads everything the agent needs, and calls the **Vertex AI Reasoning Engine** `:query` API with one self-contained JSON message (see [Message Contracts](#message-contracts)).
+3. **Gradr-Agent** runs a sequential pipeline of tool-free sub-agents (see [Agent Pipelines](#agent-pipelines)). Files referenced as `gs://` URIs in the message are attached to the model request; every stage returns schema-validated JSON into session state.
+4. **Backend** reads the `extraction`, `grading`, `referee` and `narration` state keys, applies per-question bounds, "answer any N of M" selection, total caps and review routing, and persists the result to **MongoDB**.
 
-> **Backend ↔ Agent integration**: The backend calls the deployed agent via the Vertex AI Reasoning Engine `:query` API, authenticated with Google service account credentials. See the [agentRuntime.js gist](https://gist.github.com/Fiewor/29d17b6ad354cfdf63c25a01082064c3) for the full implementation.
+> **Backend ↔ Agent integration**: The backend calls the deployed agent via the Vertex AI Reasoning Engine `:query` API, authenticated with Google service account credentials. `AgentEngineApp.query` returns the final event with all stages' `state_delta` merged.
 
 ## Overview
 
 Gradr-Agent acts as the AI reasoning layer for automated grading. It processes marking guides, student answers, and grading rules to generate reliable scoring decisions. The agent uses:
 
-- Gemini 2.5 Flash / Flash-Lite via Vertex AI
-- ReAct prompting for reasoning and tool use
-- Custom MCP tools for rubric parsing, answer normalization, and ALOC cache triggers
-- MongoDB MCP for database read/write operations
-- GCS MCP for Cloud Storage access (student scripts, marking guides)
+- Gemini 3 Flash / Flash-Lite via the global Vertex AI endpoint (`app/agents/model_config.py`)
+- Pydantic output schemas for every grading stage (`app/schemas.py`)
+- No tools, database access or web search: the backend owns all I/O and the final score
 - BigQuery telemetry for post-hoc evaluation
 - OpenTelemetry GenAI instrumentation for distributed tracing
 
@@ -85,30 +81,23 @@ Gradr-Agent acts as the AI reasoning layer for automated grading. It processes m
 
 ### PBT (Paper-Based Test) Grading Pipeline
 
-A `SequentialAgent` that orchestrates six specialized agents in order:
+A `SequentialAgent` (`PBTGradingPipeline`) of four tool-free agents:
 
-| Step | Agent | Model | Role |
-|------|-------|-------|------|
-| 1 | `PreprocessingAgent` | gemini-2.5-flash | Parses questions, marking guide, and student answers using MCP tools |
-| 2 | `GradingAgent` | gemini-2.5-flash | Evaluates answers against the rubric. Delegates to `OnlineAnswersAgent` (Google Search) and `SummarizerAgent` as sub-agents |
-| 3 | `RefereeAgent` | gemini-2.5-flash | Cross-checks grades for consistency. Flags low-confidence results for teacher review (HITL) |
-| 4 | `WeaknessDetectionAgent` | gemini-2.5-flash-lite | Identifies weak topics from graded results |
-| 5 | `SmartPrepAgent` | gemini-2.5-flash-lite | Auto-generates personalized practice sessions based on weaknesses |
-| 6 | `FinalAggregator` | gemini-2.5-flash-lite | Persists final results and generates the grading payload |
+| Step | Agent | Model | Output key | Role |
+|------|-------|-------|------------|------|
+| 1 | `ExtractionAgent` | advanced | `extraction` | Transcribes the attached `[script]` per question using the `[questionPaper]`; never grades |
+| 2 | `PBTGradingAgent` | advanced | `grading` | Grades each extracted answer against the attached `[markingGuide]` only |
+| 3 | `RefereeAgent` | lightweight | `referee` | Flags score/explanation contradictions and scores on unattempted questions; never changes scores |
+| 4 | `FeedbackNarrationAgent` | lightweight | `narration` | Writes overall explanation and feedback without stating a total |
 
 ### CBT (Computer-Based Test) Grading Pipeline
 
-A `SequentialAgent` for auto-grading online exam submissions:
+A `SequentialAgent` (`CBTSubmissionGradingPipeline`) for the essay part of online exam submissions. Multiple-choice questions are scored deterministically by the backend.
 
-| Step | Agent | Model | Role |
-|------|-------|-------|------|
-| 1 | `AttemptRetrievalAgent` | gemini-2.5-flash-lite | Fetches the student's exam attempt from MongoDB |
-| 2 | `MCQGradingAgent` | gemini-2.5-flash-lite | Grades multiple-choice questions |
-| 3 | `EssayGradingAgent` | gemini-2.5-flash | Grades essay/free-response questions against rubrics |
-| 4 | `FeedbackNarrationAgent` | gemini-2.5-flash-lite | Generates human-readable feedback narratives |
-| 5 | `WeaknessDetectionAgent` | gemini-2.5-flash-lite | Identifies weak topics |
-| 6 | `SmartPrepAgent` | gemini-2.5-flash-lite | Auto-generates practice sessions |
-| 7 | `ResultPersistenceAgent` | gemini-2.5-flash-lite | Persists results to MongoDB |
+| Step | Agent | Model | Output key | Role |
+|------|-------|-------|------------|------|
+| 1 | `EssayGradingAgent` | advanced | `grading` | Grades each essay against its model answer and rubric (or the attached `[markingGuide]`) |
+| 2 | `FeedbackNarrationAgent` | lightweight | `narration` | Writes overall explanation and feedback from essay grades and the MCQ summary |
 
 ### CBT Exam Generation Pipeline
 
@@ -116,27 +105,32 @@ A `SequentialAgent` that generates exam questions from uploaded course materials
 
 | Step | Agent | Model | Role |
 |------|-------|-------|------|
-| 1 | `TopicExtractionAgent` | gemini-2.5-flash-lite | Analyzes documents and extracts the top 5–10 academic topics with concentration weights |
-| 2 | `QuestionGenerationAgent` | gemini-2.5-flash | Generates curriculum-aligned MCQ, essay, or hybrid questions based on extracted topics. Skipped if the request is extract-only |
+| 1 | `TopicExtractionAgent` | lightweight | Analyzes documents and extracts the top 5–10 academic topics with concentration weights |
+| 2 | `QuestionGenerationAgent` | advanced | Generates curriculum-aligned MCQ, essay, or hybrid questions (each tagged with its extracted `topic`). Skipped if the request is extract-only |
 
-### MCP Toolsets
+### Message Contracts
 
-The agent connects to three MCP servers:
+The backend sends `query(message=JSON.stringify(payload))`. File references are `{"gcsUri": "gs://...", "mimeType": "..."}`.
 
-| Toolset | Connection | Tools |
-|---------|-----------|-------|
-| **Gradr MCP** (custom) | Streamable HTTP → Cloud Run | `parse_questions`, `parse_marking_guide`, `normalize_answers`, `trigger_aloc_cache` |
-| **MongoDB MCP** | stdio (npx) | Full MongoDB CRUD operations |
-| **GCS MCP** | stdio (npx) | Google Cloud Storage read/write |
+```json
+// CBTSubmissionGradingPipeline
+{"contractVersion":2,"task":"grade_cbt_essays","attemptId":"…","examType":"GENERIC",
+ "markingGuide":{"gcsUri":"gs://grdr/…pdf","mimeType":"application/pdf"} | null,
+ "essays":[{"questionId":"Q3","question":"…","description":"…","maxMarks":10,"modelAnswer":"…"|null,"rubric":"…","topic":"…","studentAnswer":"…"}],
+ "mcqSummary":[{"questionId":"Q1","topic":"…","correct":true,"score":2,"maxMarks":2}]}
+// PBTGradingPipeline
+{"contractVersion":2,"task":"grade_pbt_script","examType":"exam",
+ "script":{"gcsUri":"gs://grdr/…","mimeType":"application/pdf"},
+ "questionPaper":{…},"markingGuide":{…},
+ "rubric":{"totalMaxScore":60,"selectionPolicy":{"mode":"best_n","answerCount":4},"questions":[{"questionId":"Q1","maxMarks":15}]}}
+```
 
 ## Features
 
-- Automated grading using structured rubrics
-- Support for multiple grading modes (exact match, partial credit, rubric scoring)
-- Customizable evaluation workflows
-- ReAct-based multi-step reasoning with inter-agent callbacks
-- Human-in-the-loop (HITL) flagging via the RefereeAgent
-- Automatic weakness detection and personalized practice generation (SmartPrep)
+- Automated grading against marking guides, model answers and per-question rubrics
+- Verbatim script transcription separated from grading
+- Schema-validated JSON output for every stage
+- Referee consistency checks feeding the backend's teacher-review routing (HITL)
 - Cloud-first observability with BigQuery + OpenTelemetry
 - Fully reproducible dev environment
 - CI/CD-ready with Terraform + Cloud Build
@@ -148,13 +142,15 @@ gradr-agent/
 ├── app/
 │   ├── agents/
 │   │   ├── pbt_grading_pipeline.py    # PBT sequential pipeline
-│   │   ├── cbt_grading_pipeline.py    # CBT sequential pipeline
-│   │   ├── shared_agents.py           # WeaknessDetection + SmartPrep factories
-│   │   └── cbt_exam_pipeline.py          # CBT exam generation pipeline
+│   │   ├── cbt_grading_pipeline.py    # CBT essay grading pipeline
+│   │   ├── narration.py               # FeedbackNarrationAgent factory
+│   │   ├── model_config.py            # Gemini model IDs and retry options
+│   │   └── cbt_exam_pipeline.py       # CBT exam generation pipeline
 │   ├── agent_engine_app.py            # AgentEngineApp (Vertex AI deployment wrapper)
-│   ├── callbacks.py                   # Inter-agent state management & logging
-│   ├── prompts.py                     # All agent prompts
-│   ├── toolsets.py                    # MCP toolset configuration
+│   ├── callbacks.py                   # Message payload parsing, skip gates, timing
+│   ├── file_parts.py                  # Attaches gs:// payload files to model requests
+│   ├── schemas.py                     # Pydantic output schemas
+│   ├── prompts/                       # Agent prompts
 │   └── app_utils/                     # Deploy scripts, telemetry, typing
 ├── .cloudbuild/                       # Cloud Build CI/CD pipelines
 ├── deployment/                        # Terraform IaC
@@ -174,14 +170,8 @@ The agents are deployed to Vertex AI Reasoning Engine and invoked via the `:quer
 | Agent | Reasoning Engine ID | API Endpoint |
 |-------|-------------------|--------------|
 | **PBT Grading Pipeline** | `3347285579636146176` | `https://us-central1-aiplatform.googleapis.com/v1beta1/projects/gradr-421618/locations/us-central1/reasoningEngines/3347285579636146176:query` |
-| **CBT Grading Pipeline** | `1085942005021802496` | `https://us-central1-aiplatform.googleapis.com/v1beta1/projects/gradr-421618/locations/us-central1/reasoningEngines/1085942005021802496:query` |
+| **CBT Grading Pipeline** | `7102161768956297216` | `https://us-central1-aiplatform.googleapis.com/v1beta1/projects/gradr-421618/locations/us-central1/reasoningEngines/7102161768956297216:query` |
 | **CBT Exam Generation** | `1085942005021802496` | `https://us-central1-aiplatform.googleapis.com/v1beta1/projects/gradr-421618/locations/us-central1/reasoningEngines/1085942005021802496:query` |
-
-### MCP Server (Cloud Run)
-
-| Service | URL |
-|---------|-----|
-| **Gradr MCP** | `https://gradrmcp-943768265988.us-central1.run.app` |
 
 ### Backend (Cloud Run) — closed source
 
@@ -202,7 +192,6 @@ These instructions reproduce the agent environment locally.
 | `uv` | Python package manager | [astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/) |
 | Google Cloud SDK | Access to GCP resources | [cloud.google.com/sdk](https://cloud.google.com/sdk/docs/install) |
 | `make` | Automation (usually preinstalled) | [gnu.org/software/make](https://www.gnu.org/software/make/) |
-| Node.js 18+ | Required for MongoDB MCP and GCS MCP (npx) | [nodejs.org](https://nodejs.org/) |
 
 ### Clone the Repo
 
@@ -223,9 +212,9 @@ Create a `.env` file (see `.env.example`) with the following:
 
 ```bash
 GOOGLE_CLOUD_PROJECT=gradr-421618
-GOOGLE_CLOUD_LOCATION=us-central1
+GOOGLE_CLOUD_LOCATION=global
 GOOGLE_GENAI_USE_VERTEXAI=True
-MDB_MCP_CONNECTION_STRING=<your-mongodb-connection-string>
+GRADR_GEMINI_MODEL_LOCATION=global
 ```
 
 You must also authenticate with GCP:

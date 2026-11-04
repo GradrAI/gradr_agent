@@ -9,6 +9,8 @@ with the Agent Engine region.
 
 import os
 
+from google.genai import types
+
 _LIGHTWEIGHT_GEMINI_MODEL_ID = "gemini-3.1-flash-lite"
 _ADVANCED_GEMINI_MODEL_ID = "gemini-3.5-flash-lite"
 
@@ -54,4 +56,8 @@ LIGHTWEIGHT_GEMINI_MODEL = resolve_gemini_model(
 )
 ADVANCED_GEMINI_MODEL = resolve_gemini_model(
     os.environ.get("GRADR_ADVANCED_GEMINI_MODEL", _ADVANCED_GEMINI_MODEL_ID)
+)
+
+retry_config = types.HttpRetryOptions(
+    attempts=5, exp_base=2, initial_delay=2, http_status_codes=[429, 500, 502, 503, 504]
 )
