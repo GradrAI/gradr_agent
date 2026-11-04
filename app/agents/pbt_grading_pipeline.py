@@ -12,102 +12,53 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
 from google.adk.agents import Agent, SequentialAgent
 from google.adk.models.google_llm import Gemini
-from google.adk.tools import AgentTool, google_search
 
-from app.agents.model_config import ADVANCED_GEMINI_MODEL, LIGHTWEIGHT_GEMINI_MODEL
-from app.agents.shared_agents import (
-    create_smart_prep_agent,
-    create_weakness_detection_agent,
-)
-from app.callbacks import (
-    final_after_callback,
-    grading_after_callback,
-    pipeline_timing_after_callback,
-    pipeline_timing_before_callback,
-    preprocessing_after_callback,
-    referee_after_callback,
-)
-from app.prompts import (
-    FINAL_AGGREGATOR_PROMPT,
-    GRADER_PROMPT_BASE,
-    ONLINE_ANSWERS_PROMPT,
-    PREPROCESSING_PROMPT,
-    REFEREE_PROMPT,
-    SUMMARIZER_PROMPT,
-)
-from app.toolsets import (
-    custom_mcp_toolset,
-    gcs_mcp_toolset,
-    mongo_mcp_toolset,
+from app.agents.model_config import (
+    ADVANCED_GEMINI_MODEL,
+    LIGHTWEIGHT_GEMINI_MODEL,
     retry_config,
 )
+from app.agents.narration import create_feedback_narration_agent
+from app.callbacks import (
+    pipeline_timing_after_callback,
+    pipeline_timing_before_callback,
+)
+from app.file_parts import attach_payload_files
+from app.prompts import EXTRACTION_PROMPT, PBT_GRADING_PROMPT, REFEREE_PROMPT
+from app.schemas import ExtractionOutput, GradingOutput, RefereeOutput
 
-logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Agent definitions
-# ---------------------------------------------------------------------------
-preprocessing_agent = Agent(
-    name="PreprocessingAgent",
+extraction_agent = Agent(
+    name="ExtractionAgent",
     model=Gemini(model=ADVANCED_GEMINI_MODEL, retry_options=retry_config),
-    instruction=PREPROCESSING_PROMPT,
-    tools=[custom_mcp_toolset, mongo_mcp_toolset, gcs_mcp_toolset],
-    output_key="preprocessing_context",
-    after_agent_callback=preprocessing_after_callback,
+    instruction=EXTRACTION_PROMPT,
+    tools=[],
+    output_schema=ExtractionOutput,
+    output_key="extraction",
+    before_model_callback=attach_payload_files("script", "questionPaper"),
 )
 
-online_answers_agent = Agent(
-    name="OnlineAnswersAgent",
-    model=Gemini(model=LIGHTWEIGHT_GEMINI_MODEL, retry_options=retry_config),
-    instruction=ONLINE_ANSWERS_PROMPT,
-    tools=[google_search],
-    output_key="online_answers",
-)
-
-summarizer_agent = Agent(
-    name="SummarizerAgent",
-    model=Gemini(model=LIGHTWEIGHT_GEMINI_MODEL, retry_options=retry_config),
-    instruction=SUMMARIZER_PROMPT,
-    output_key="final_summary",
-)
-
-grading_agent = Agent(
-    name="GradingAgent",
+pbt_grading_agent = Agent(
+    name="PBTGradingAgent",
     model=Gemini(model=ADVANCED_GEMINI_MODEL, retry_options=retry_config),
-    instruction=GRADER_PROMPT_BASE,
-    tools=[custom_mcp_toolset, AgentTool(online_answers_agent), AgentTool(summarizer_agent)],
-    sub_agents=[online_answers_agent, summarizer_agent],
-    output_key="graded_result",
-    after_agent_callback=grading_after_callback,
+    instruction=PBT_GRADING_PROMPT,
+    tools=[],
+    output_schema=GradingOutput,
+    output_key="grading",
+    before_model_callback=attach_payload_files("markingGuide", "questionPaper"),
 )
 
 referee_agent = Agent(
     name="RefereeAgent",
-    model=Gemini(model=ADVANCED_GEMINI_MODEL, retry_options=retry_config),
-    instruction=REFEREE_PROMPT,
-    tools=[mongo_mcp_toolset],
-    output_key="referee_report",
-    after_agent_callback=referee_after_callback,
-)
-
-final_aggregator = Agent(
-    name="FinalAggregator",
     model=Gemini(model=LIGHTWEIGHT_GEMINI_MODEL, retry_options=retry_config),
-    instruction=FINAL_AGGREGATOR_PROMPT,
-    tools=[mongo_mcp_toolset],
-    output_key="final_payload",
-    after_agent_callback=final_after_callback,
+    instruction=REFEREE_PROMPT,
+    tools=[],
+    output_schema=RefereeOutput,
+    output_key="referee",
 )
 
 
-# ---------------------------------------------------------------------------
-# Pipeline assembly
-# ---------------------------------------------------------------------------
 class PBTGradingPipelineAgent(SequentialAgent):
     """Subclass to ensure inspect.getmodule resolves to this file (ADK runner fix)."""
 
@@ -117,12 +68,10 @@ class PBTGradingPipelineAgent(SequentialAgent):
 pbt_grading_pipeline: SequentialAgent = PBTGradingPipelineAgent(
     name="PBTGradingPipeline",
     sub_agents=[
-        preprocessing_agent,
-        grading_agent,
+        extraction_agent,
+        pbt_grading_agent,
         referee_agent,
-        create_weakness_detection_agent(),
-        create_smart_prep_agent(),
-        final_aggregator,
+        create_feedback_narration_agent(),
     ],
     before_agent_callback=pipeline_timing_before_callback,
     after_agent_callback=pipeline_timing_after_callback,

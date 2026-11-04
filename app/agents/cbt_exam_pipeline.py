@@ -3,9 +3,12 @@ import logging
 from google.adk.agents import Agent, SequentialAgent
 from google.adk.models.google_llm import Gemini
 
-from app.agents.model_config import ADVANCED_GEMINI_MODEL, LIGHTWEIGHT_GEMINI_MODEL
+from app.agents.model_config import (
+    ADVANCED_GEMINI_MODEL,
+    LIGHTWEIGHT_GEMINI_MODEL,
+    retry_config,
+)
 from app.callbacks import generic_callback, skip_if_extract_only
-from app.toolsets import retry_config
 
 logger = logging.getLogger(__name__)
 
@@ -133,10 +136,12 @@ question_generation_agent = Agent(
         '    "difficulty": "easy",\n'
         '    "options": [{ "id": 1, "text": "..." }, { "id": 2, "text": "..." }],\n'
         '    "correctOptionId": 1,\n'
-        '    "explanation": "..."\n'
+        '    "explanation": "...",\n'
+        '    "topic": "..."\n'
         "  }\n"
         "]\n"
         "- `difficulty` MUST be exactly one of: easy | moderate | hard.\n"
+        "- `topic` MUST be copied verbatim from the extracted topic this question tests.\n"
         "- `explanation` MUST be non-empty and MUST justify the correct answer by reference to the "
         "source material.\n"
         "- For `essay` questions omit `options` and `correctOptionId`.\n"
